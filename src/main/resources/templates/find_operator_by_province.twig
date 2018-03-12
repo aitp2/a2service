@@ -1,0 +1,23 @@
+{
+  "version": true,
+  "_source": [ "orderStatus", "orderCode" ,"totalPrice","user","province","modifyTime","message"],
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "query_string": {
+            "analyze_wildcard": true,
+            "query": "province:{{province}}"
+          }
+        },
+        {
+          
+          "exists": {
+            "field": "orderStatus"
+          }
+        }
+      ],
+      "must_not": []
+    }
+  }
+}

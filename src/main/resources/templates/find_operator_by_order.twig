@@ -1,0 +1,24 @@
+{
+  "version": true,
+  "_source": [ "orderStatus", "orderCode" ,"totalPrice","user","province","modifyTime","message","sourceSystem"],
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "query_string": {
+            "analyze_wildcard": true,
+            "query": "orderCode:{{orderCode}}"
+          }
+        },
+        {
+          
+          "exists": {
+            "field": "orderStatus"
+          }
+        }
+      ],
+      "must_not": []
+    }
+  },
+   "sort": { "modifyTime.keyword": { "order": "desc" } }
+}
