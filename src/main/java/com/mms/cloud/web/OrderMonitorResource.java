@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.mms.cloud.dto.OrderEntity;
 import com.mms.cloud.dto.OrderEntityTypeReference;
 import com.mms.cloud.dto.ResultData;
+import com.mms.cloud.dto.TracknumEntity;
+import com.mms.cloud.dto.TracknumEntityTypeReference;
 import com.mms.cloud.facade.OrderMonitorFacade;
 import com.mms.cloud.RestClientConfig;
 import com.mms.cloud.search.SearchByTemplateRequest;
@@ -56,6 +58,29 @@ public class OrderMonitorResource {
         
         
 		return new ResultData<List<OrderEntity>>(true, "success", 20000, entities);
+	}
+	
+	@RequestMapping(value="/queryByTracknum", method=RequestMethod.GET)
+	public ResultData<List<TracknumEntity>> queryMmsMonitorData(@RequestParam(value = "tracknum", required = true) String tracknum) {
+		TracknumEntity e = new TracknumEntity();
+		
+		SearchByTemplateRequest request = SearchByTemplateRequest.create()
+                .setIndexName(index)
+                .setTemplateName("fint_log_by_tracknum.twig")
+                .setAddId(false)
+                .setTypeReference(new TracknumEntityTypeReference())
+                .addModelParam("tracknum", tracknum);
+
+        HitsResponse<TracknumEntity> hitsResponse = searchService.queryByTemplate(request);
+        List<TracknumEntity> entities = hitsResponse.getHits();
+        for(TracknumEntity oe:entities){
+        	System.out.println(oe.toString());
+        }
+        if(entities.size() == 0){
+        	return new ResultData<List<TracknumEntity>>(true, "fail", -1, entities);
+        }
+        
+		return new ResultData<List<TracknumEntity>>(true, "success", 20000, entities);
 	}
 	
 	@RequestMapping(value="/users", method=RequestMethod.GET)

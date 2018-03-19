@@ -1,0 +1,18 @@
+{
+  "version": true,
+  "_source": [ "logsource","logtime", "orderCode" ,"message"],
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "query_string": {
+            "analyze_wildcard": true,
+            "query": "orderCode:{{tracknum}}"
+          }
+        }
+      ],
+      "must_not": []
+    }
+  },
+   "sort": { "logtime.keyword": { "order": "asc" } }
+}
