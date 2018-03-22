@@ -226,7 +226,7 @@ public class ProvinceMap {
 	}
 	
 	public  static void reset(String province){
-		if(province == null || province.equals("china")){
+		if(province == null || province.equals("")|| province.equals("china")){
 			province_nomarl.put("四川", 0);
 			province_nomarl.put("贵州", 0);
 			province_nomarl.put("云南", 0);

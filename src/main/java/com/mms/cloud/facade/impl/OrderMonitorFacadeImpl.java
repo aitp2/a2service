@@ -229,7 +229,7 @@ public class OrderMonitorFacadeImpl implements OrderMonitorFacade{
 			}
 		}
 		
-		if(province == null || province.equals("china")){
+		if(province == null || province.equals("")|| province.equals("china")){
 			for(String provice:ProvinceMap.province_nomarl.keySet()){
 				ProvinceMap.china_namarl = ProvinceMap.china_namarl +ProvinceMap.province_nomarl.get(provice);
 				ProvinceMap.china_nomarl_order.addAll(ProvinceMap.province_nomarl_order.get(provice));

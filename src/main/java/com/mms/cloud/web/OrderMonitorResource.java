@@ -1,6 +1,8 @@
 package com.mms.cloud.web;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,8 +12,12 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.mms.cloud.dto.CountryOrderMonitorDTO;
 import com.mms.cloud.dto.OrderEntity;
 import com.mms.cloud.dto.OrderEntityTypeReference;
+import com.mms.cloud.dto.OrderStatusEntity;
+import com.mms.cloud.dto.OrderStatusMonitorDTO;
+import com.mms.cloud.dto.OrderStatusStatisticsDataDTO;
 import com.mms.cloud.dto.ResultData;
 import com.mms.cloud.dto.TracknumEntity;
 import com.mms.cloud.dto.TracknumEntityTypeReference;
@@ -20,6 +26,9 @@ import com.mms.cloud.RestClientConfig;
 import com.mms.cloud.search.SearchByTemplateRequest;
 import com.mms.cloud.search.SearchService;
 import com.mms.cloud.search.response.HitsResponse;
+import com.mms.cloud.utils.CityLocation;
+import com.mms.cloud.utils.MonitorStatus;
+import com.mms.cloud.utils.ProvinceMap;
 
 @RestController
 @RequestMapping("/api")
@@ -29,14 +38,17 @@ public class OrderMonitorResource {
 	@Autowired
 	private OrderMonitorFacade orderMonitorFacade;
 	
-//    private final static String INDEX = "orderpoc-*";
-    private final static String TYPE = "log";
-    
     private String index;
 
     @Autowired
     private SearchService searchService;
 
+    /**
+     * 根据时间条件查询订单
+     * @param queryStartDate
+     * @param queryEndDate
+     * @return
+     */
 	@RequestMapping(value="/queryOrderList", method=RequestMethod.GET)
 	public ResultData<List<OrderEntity>> queryMmsMonitorData(@RequestParam(value = "queryStartDate", required = true) String queryStartDate,
 			@RequestParam(value = "queryEndDate", required = true) String queryEndDate) {
@@ -60,6 +72,11 @@ public class OrderMonitorResource {
 		return new ResultData<List<OrderEntity>>(true, "success", 20000, entities);
 	}
 	
+	/**
+	 * 根据tracknum查询日志事件
+	 * @param tracknum
+	 * @return
+	 */
 	@RequestMapping(value="/queryByTracknum", method=RequestMethod.GET)
 	public ResultData<List<TracknumEntity>> queryMmsMonitorData(@RequestParam(value = "tracknum", required = true) String tracknum) {
 		TracknumEntity e = new TracknumEntity();
@@ -81,6 +98,121 @@ public class OrderMonitorResource {
         }
         
 		return new ResultData<List<TracknumEntity>>(true, "success", 20000, entities);
+	}
+	
+	/**
+	 * 查询警告数量数据
+	 * @return
+	 */
+	@RequestMapping(value="/queryJinggaoData", method=RequestMethod.GET)
+	public String queryJinggaoData() {
+		Map<String,List<CountryOrderMonitorDTO>> map_data =orderMonitorFacade.getCountryOrderMonitorData(null);
+		//警告数据
+		StringBuffer jinggao_json = new StringBuffer();
+		jinggao_json.append("[");
+		int j=1;
+		for(CountryOrderMonitorDTO countryOrderMonitorDTO:map_data.get(MonitorStatus.JINGGAO)){
+			if(new Integer(countryOrderMonitorDTO.getNum()) > 0){
+				jinggao_json.append("{latLng: ").append(CityLocation.cityLocation.get(countryOrderMonitorDTO.getProvince()))
+				.append(", name:'").append(countryOrderMonitorDTO.getProvince()).append("'");
+				jinggao_json.append("},");
+			j = j + 1;
+			}
+			
+		}
+		jinggao_json = new StringBuffer(jinggao_json.substring(0, jinggao_json.length()-1));
+		jinggao_json.append("]");
+        
+        return jinggao_json.toString();
+	}
+	
+	/**
+	 * 查询订单状态数据
+	 * @return
+	 */
+	@RequestMapping(value="/queryOrderStatusData", method=RequestMethod.GET)
+	public ResultData<List<OrderStatusEntity>> queryOrderStatusData() {
+		List<OrderStatusEntity> list = new ArrayList<OrderStatusEntity> ();
+		List<OrderStatusStatisticsDataDTO> list_statis = orderMonitorFacade.getOrderStatusStatisticsDataDTO(null);
+		for(OrderStatusStatisticsDataDTO orderStatusStatisticsDataDTO:list_statis){
+			OrderStatusEntity e = new OrderStatusEntity();
+			if(orderStatusStatisticsDataDTO.getStatus().equals(MonitorStatus.NOMARL)){
+				e.setStatus("正常订单");
+				e.setNum(orderStatusStatisticsDataDTO.getNum());
+				list.add(e);
+			}
+			if(orderStatusStatisticsDataDTO.getStatus().equals(MonitorStatus.YUJING)){
+				e.setStatus("预警订单");
+				e.setNum(orderStatusStatisticsDataDTO.getNum());
+				list.add(e);
+			}
+			if(orderStatusStatisticsDataDTO.getStatus().equals(MonitorStatus.JINGGAO)){
+				e.setStatus("警告订单");
+				e.setNum(orderStatusStatisticsDataDTO.getNum());
+				list.add(e);
+			}
+			
+		}
+        
+        return new ResultData<List<OrderStatusEntity>>(true, "success", 20000, list);
+	}
+	
+	/**
+	 * 按省查询警告数据
+	 * @param province
+	 * @return
+	 */
+	@RequestMapping(value="/queryJinggaoDataByProvince", method=RequestMethod.GET)
+	public ResultData<List<OrderStatusMonitorDTO>> queryJinggaoDataByProvince(@RequestParam(value = "province", required = true) String province) {
+		Map<String,List<CountryOrderMonitorDTO>> map_data =orderMonitorFacade.getCountryOrderMonitorData(province);
+		List<OrderStatusMonitorDTO> list = this.getOrderStatusMonitorDTOList(province, MonitorStatus.JINGGAO);
+        return new ResultData<List<OrderStatusMonitorDTO>>(true, "success", 20000, list);
+	}
+	
+	private List<OrderStatusMonitorDTO> getOrderStatusMonitorDTOList(String province,String status){
+		List<OrderStatusMonitorDTO> list_monitorOrder = new ArrayList<OrderStatusMonitorDTO>();
+		if(province == null || province.equals("")){
+			//全国全状态
+			if(status == null || status.equals("")){
+				list_monitorOrder.addAll(ProvinceMap.china_nomarl_order);
+				list_monitorOrder.addAll(ProvinceMap.china_yujing_order);
+				list_monitorOrder.addAll(ProvinceMap.china_jinggao_order);
+			}
+			//全国某状态
+			else{
+				if(status.equals(MonitorStatus.NOMARL)){
+					list_monitorOrder.addAll(ProvinceMap.china_nomarl_order);
+				}
+				if(status.equals(MonitorStatus.YUJING)){
+					list_monitorOrder.addAll(ProvinceMap.china_yujing_order);
+				}
+				if(status.equals(MonitorStatus.JINGGAO)){
+					list_monitorOrder.addAll(ProvinceMap.china_jinggao_order);
+				}
+			}
+		}
+		
+		else{
+			//某省全状态
+			if(status == null || status.equals("")){
+				list_monitorOrder.addAll(ProvinceMap.province_nomarl_order.get(province));
+				list_monitorOrder.addAll(ProvinceMap.province_yujing_order.get(province));
+				list_monitorOrder.addAll(ProvinceMap.province_jinggao_order.get(province));
+			}
+			//某省某状态
+			else{
+				if(status.equals(MonitorStatus.NOMARL)){
+					list_monitorOrder.addAll(ProvinceMap.province_nomarl_order.get(province));
+				}
+				if(status.equals(MonitorStatus.YUJING)){
+					list_monitorOrder.addAll(ProvinceMap.province_yujing_order.get(province));
+				}
+				if(status.equals(MonitorStatus.JINGGAO)){
+					list_monitorOrder.addAll(ProvinceMap.province_jinggao_order.get(province));
+				}
+			}
+		}
+		return list_monitorOrder;
 	}
 	
 	@RequestMapping(value="/users", method=RequestMethod.GET)
