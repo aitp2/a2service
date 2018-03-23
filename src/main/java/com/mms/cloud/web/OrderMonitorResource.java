@@ -215,6 +215,16 @@ public class OrderMonitorResource {
 		return list_monitorOrder;
 	}
 	
+	@RequestMapping(value="/queryAllOrder", method=RequestMethod.GET)
+	public ResultData<List<OrderStatusMonitorDTO>> queryAllOrder() {
+		Map<String,List<CountryOrderMonitorDTO>> map_data =orderMonitorFacade.getCountryOrderMonitorData(null);
+		List<OrderStatusMonitorDTO> list = new ArrayList<OrderStatusMonitorDTO>();
+		list.addAll(this.getOrderStatusMonitorDTOList(null, MonitorStatus.NOMARL));
+		list.addAll(this.getOrderStatusMonitorDTOList(null, MonitorStatus.YUJING));
+		list.addAll(this.getOrderStatusMonitorDTOList(null, MonitorStatus.JINGGAO));
+        return new ResultData<List<OrderStatusMonitorDTO>>(true, "success", 20000, list);
+	}
+	
 	@RequestMapping(value="/users", method=RequestMethod.GET)
 	public String getusers(){
 		String json = "[{"+
