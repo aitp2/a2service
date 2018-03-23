@@ -26,13 +26,20 @@ public class MockController {
 			
 	@RequestMapping(value="/payMock")
 	public void payMock(HttpServletRequest request, HttpServletResponse response, @Parameter String orderCode, @Parameter String province){
-		if(payMockStatus != null&&payMockStatus.equals("1")){
+		String lastnum = orderCode.substring(orderCode.length()-1, orderCode.length());
+		if(lastnum.equals("4") || lastnum.equals("5") || lastnum.equals("6")){
 			SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			LOG.info("sourceSystem:Pay,orderStatus:Payed,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date()));
-		}else{
-			SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			LOG.info("sourceSystem:Pay,orderStatus:PayedFail,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date())+
+			LOG.info("orderStatus:PayedFail,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date())+
 					"失败原因签名验证失败");
+		}else{
+			if(payMockStatus != null&&payMockStatus.equals("1")){
+				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				LOG.info("orderStatus:Payed,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date()));
+			}else{
+				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				LOG.info("orderStatus:PayedFail,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date())+
+						"失败原因签名验证失败");
+			}
 		}
 		
 		response.setContentType("application/json");
@@ -48,15 +55,22 @@ public class MockController {
 	
 	@RequestMapping(value="/sendMock")
 	public void sendMock(HttpServletRequest request, HttpServletResponse response, @Parameter String orderCode, @Parameter String province){
-		
-		if(sendMockStatus != null&&sendMockStatus.equals("1")){
+		String lastnum = orderCode.substring(orderCode.length()-1, orderCode.length());
+		if(lastnum.equals("7") || lastnum.equals("8") || lastnum.equals("9") || lastnum.equals("10")){
 			SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			LOG.info("sourceSystem:warehouse,orderStatus:Sent,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date()));
-		}else{
-			SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			LOG.info("sourceSystem:warehouse,orderStatus:SentFailed,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date())+
+			LOG.info("orderStatus:SentFailed,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date())+
 					"失败原因仓库库存不足");
+		}else{
+			if(sendMockStatus != null&&sendMockStatus.equals("1")){
+				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				LOG.info("orderStatus:Sent,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date()));
+			}else{
+				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				LOG.info("orderStatus:SentFailed,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date())+
+						"失败原因仓库库存不足");
+			}
 		}
+		
 		response.setContentType("application/json");
 		response.setHeader("Cache-Control", "no-cache");
 		response.setCharacterEncoding("UTF-8");

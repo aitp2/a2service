@@ -18,6 +18,8 @@ import com.mms.cloud.dto.OrderEntityTypeReference;
 import com.mms.cloud.dto.OrderStatusEntity;
 import com.mms.cloud.dto.OrderStatusMonitorDTO;
 import com.mms.cloud.dto.OrderStatusStatisticsDataDTO;
+import com.mms.cloud.dto.ProductTotal;
+import com.mms.cloud.dto.ProductTotalTypeReference;
 import com.mms.cloud.dto.ResultData;
 import com.mms.cloud.dto.TracknumEntity;
 import com.mms.cloud.dto.TracknumEntityTypeReference;
@@ -223,6 +225,23 @@ public class OrderMonitorResource {
 		list.addAll(this.getOrderStatusMonitorDTOList(null, MonitorStatus.YUJING));
 		list.addAll(this.getOrderStatusMonitorDTOList(null, MonitorStatus.JINGGAO));
         return new ResultData<List<OrderStatusMonitorDTO>>(true, "success", 20000, list);
+	}
+	
+	@RequestMapping(value="/queryAllProduct", method=RequestMethod.GET)
+	public ResultData<List<ProductTotal>> queryAllProduct() {
+		SearchByTemplateRequest request = SearchByTemplateRequest.create()
+                .setIndexName(index)
+                .setTemplateName("fint_producttotal_by_product.twig")
+                .setAddId(false)
+                .setTypeReference(new ProductTotalTypeReference());
+
+        HitsResponse<ProductTotal> hitsResponse = searchService.queryByTemplate(request);
+        List<ProductTotal> entities = hitsResponse.getHits();
+        if(entities.size() == 0){
+        	return new ResultData<List<ProductTotal>>(true, "fail", -1, entities);
+        }
+        
+		return new ResultData<List<ProductTotal>>(true, "success", 20000, entities);
 	}
 	
 	@RequestMapping(value="/users", method=RequestMethod.GET)
