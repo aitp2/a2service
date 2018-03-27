@@ -122,7 +122,35 @@ public class OrderMonitorResource {
 			}
 			
 		}
-		jinggao_json = new StringBuffer(jinggao_json.substring(0, jinggao_json.length()-1));
+		if(j > 1){
+			jinggao_json = new StringBuffer(jinggao_json.substring(0, jinggao_json.length()-1));
+		}
+		jinggao_json.append("]");
+        
+        return jinggao_json.toString();
+	}
+	
+	/**
+	 * 查询警告数量数据
+	 * @return
+	 */
+	@RequestMapping(value="/queryJinggaoShuliang", method=RequestMethod.GET)
+	public String queryJinggaoShuliang() {
+		Map<String,List<CountryOrderMonitorDTO>> map_data =orderMonitorFacade.getCountryOrderMonitorData(null);
+		//警告数据
+		StringBuffer jinggao_json = new StringBuffer();
+		jinggao_json.append("[");
+		int j=1;
+		for(CountryOrderMonitorDTO countryOrderMonitorDTO:map_data.get(MonitorStatus.JINGGAO)){
+			if(new Integer(countryOrderMonitorDTO.getNum()) > 0){
+				jinggao_json.append(countryOrderMonitorDTO.getNum()+",");
+			j = j + 1;
+			}
+			
+		}
+		if(j > 1){
+			jinggao_json = new StringBuffer(jinggao_json.substring(0, jinggao_json.length()-1));
+		}
 		jinggao_json.append("]");
         
         return jinggao_json.toString();
