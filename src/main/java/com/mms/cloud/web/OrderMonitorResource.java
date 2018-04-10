@@ -51,27 +51,29 @@ public class OrderMonitorResource {
      * @param queryEndDate
      * @return
      */
-	@RequestMapping(value="/queryOrderList", method=RequestMethod.GET)
-	public ResultData<List<OrderEntity>> queryMmsMonitorData(@RequestParam(value = "queryStartDate", required = true) String queryStartDate,
-			@RequestParam(value = "queryEndDate", required = true) String queryEndDate) {
-		OrderEntity e = new OrderEntity();
+	@RequestMapping(value="/queryByTracknumAndTime", method=RequestMethod.GET)
+	public ResultData<List<TracknumEntity>> queryByTracknumAndTime(@RequestParam(value = "tracknum", required = true) String tracknum,
+			@RequestParam(value = "starttime", required = true) String starttime,
+			@RequestParam(value = "endtime", required = true) String endtime) {
+		TracknumEntity e = new TracknumEntity();
 		
 		SearchByTemplateRequest request = SearchByTemplateRequest.create()
                 .setIndexName(index)
-                .setTemplateName("find_order.twig")
+                .setTemplateName("fint_log_by_tracknum.twig")
                 .setAddId(false)
-                .setTypeReference(new OrderEntityTypeReference())
-                .addModelParam("queryStartDate", queryStartDate)
-                .addModelParam("queryEndDate", queryEndDate);
+                .setTypeReference(new TracknumEntityTypeReference())
+                .addModelParam("tracknum", tracknum)
+                .addModelParam("starttime", starttime)
+                .addModelParam("endtime", endtime);
 
-        HitsResponse<OrderEntity> hitsResponse = searchService.queryByTemplate(request);
-        List<OrderEntity> entities = hitsResponse.getHits();
-        for(OrderEntity oe:entities){
+        HitsResponse<TracknumEntity> hitsResponse = searchService.queryByTemplate(request);
+        List<TracknumEntity> entities = hitsResponse.getHits();
+        for(TracknumEntity oe:entities){
         	System.out.println(oe.toString());
         }
         
         
-		return new ResultData<List<OrderEntity>>(true, "success", 20000, entities);
+		return new ResultData<List<TracknumEntity>>(true, "success", 20000, entities);
 	}
 	
 	/**
@@ -115,8 +117,9 @@ public class OrderMonitorResource {
 		int j=1;
 		for(CountryOrderMonitorDTO countryOrderMonitorDTO:map_data.get(MonitorStatus.JINGGAO)){
 			if(new Integer(countryOrderMonitorDTO.getNum()) > 0){
-				jinggao_json.append("{latLng: ").append(CityLocation.cityLocation.get(countryOrderMonitorDTO.getProvince()))
-				.append(", name:'").append(countryOrderMonitorDTO.getProvince()).append("'");
+				jinggao_json.append("{cha: '").append(CityLocation.cityLocation.get(countryOrderMonitorDTO.getProvince()))
+				.append("', name:'").append(countryOrderMonitorDTO.getProvince())
+				.append("', jinggao:'").append(countryOrderMonitorDTO.getNum()).append("'");
 				jinggao_json.append("},");
 			j = j + 1;
 			}

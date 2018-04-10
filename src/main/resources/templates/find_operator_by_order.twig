@@ -15,6 +15,14 @@
           "exists": {
             "field": "orderStatus"
           }
+        },
+          {
+          "range": {
+            "modifyTime.keyword": {
+              "gte": "{{startTime}}",
+              "lt": "{{endTime}}"
+            }
+          }
         }
       ],
       "must_not": []

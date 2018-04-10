@@ -9,6 +9,14 @@
             "analyze_wildcard": true,
             "query": "orderCode:{{tracknum}}"
           }
+        },
+          {
+          "range": {
+            "logtime.keyword": {
+              "gte": "{{starttime}}",
+              "lt": "{{endtime}}"
+            }
+          }
         }
       ],
       "must_not": []

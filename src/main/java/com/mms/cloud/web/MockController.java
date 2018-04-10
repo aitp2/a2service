@@ -30,7 +30,7 @@ public class MockController {
 		if(lastnum.equals("4") || lastnum.equals("5") || lastnum.equals("6")){
 			SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			LOG.info("orderStatus:PayedFail,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date())+
-					"失败原因签名验证失败");
+					"Error:失败原因签名验证失败");
 		}else{
 			if(payMockStatus != null&&payMockStatus.equals("1")){
 				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -38,7 +38,7 @@ public class MockController {
 			}else{
 				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 				LOG.info("orderStatus:PayedFail,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date())+
-						"失败原因签名验证失败");
+						"Error:失败原因签名验证失败");
 			}
 		}
 		
@@ -59,7 +59,7 @@ public class MockController {
 		if(lastnum.equals("7") || lastnum.equals("8") || lastnum.equals("9") || lastnum.equals("10")){
 			SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			LOG.info("orderStatus:SentFailed,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date())+
-					"失败原因仓库库存不足");
+					"Error:失败原因仓库库存不足");
 		}else{
 			if(sendMockStatus != null&&sendMockStatus.equals("1")){
 				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -67,7 +67,7 @@ public class MockController {
 			}else{
 				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 				LOG.info("orderStatus:SentFailed,orderCode:"+orderCode+",province:来自"+province+"订单,modifyTime:"+formatter.format(new Date())+
-						"失败原因仓库库存不足");
+						"Error:失败原因仓库库存不足");
 			}
 		}
 		
