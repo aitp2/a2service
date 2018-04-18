@@ -56,7 +56,8 @@ public class OrderMonitorResource {
 			@RequestParam(value = "starttime", required = true) String starttime,
 			@RequestParam(value = "endtime", required = true) String endtime) {
 		TracknumEntity e = new TracknumEntity();
-		
+		starttime = starttime.replaceAll("-", "/");
+		endtime = endtime.replaceAll("-", "/");
 		SearchByTemplateRequest request = SearchByTemplateRequest.create()
                 .setIndexName(index)
                 .setTemplateName("fint_log_by_tracknum.twig")

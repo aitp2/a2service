@@ -295,6 +295,9 @@ public class OrderMonitorFacadeImpl implements OrderMonitorFacade{
 		if(payTime != null){
 			return MonitorStatus.NOMARL;
 		}else{
+			if(createdTime == null){
+				return MonitorStatus.NOMARL;
+			}
 			//已创建24h内或已取消为正常
 			if(cancelTime != null || DateCompare.compareRuleTimeAndNow(createdTime, rule_pay_yujing_hour) >= 0 
 					){
