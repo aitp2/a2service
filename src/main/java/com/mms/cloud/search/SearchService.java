@@ -63,6 +63,22 @@ public class SearchService {
             throw new QueryExecutionException("Error when executing a document");
         }
     }
+    
+    public <T> HitsResponse<T> queryByTemplate(SearchByTemplateRequest request,String size) {
+        Assert.notNull(request, "Need to provide a SearchByTemplateRequest object");
+
+        try {
+            ElasticQueryResponse<T> elasticQueryResponse = doExecuteQuery(request,size);
+            HitsResponse<T> hitsResponse = new HitsResponse<>();
+
+            putInfoFromQueryIntoHitsResponse(request, elasticQueryResponse, hitsResponse);
+
+            return hitsResponse;
+        } catch (IOException e) {
+            logger.warn("Problem while executing request.", e);
+            throw new QueryExecutionException("Error when executing a document");
+        }
+    }
 
     /**
      * Executes a search request with the provided query, but expects an aggregation part in the query. It will not
@@ -76,7 +92,7 @@ public class SearchService {
         Assert.notNull(request, "Need to provide a SearchByTemplateRequest object");
 
         try {
-            ElasticQueryResponse<T> elasticQueryResponse = doExecuteQuery(request);
+            ElasticQueryResponse<T> elasticQueryResponse = doExecuteQuery(request,"0");
             HitsAggsResponse<T> hitsAggsResponse = new HitsAggsResponse<>();
             putInfoFromQueryIntoHitsResponse(request,elasticQueryResponse,hitsAggsResponse);
 
@@ -115,6 +131,25 @@ public class SearchService {
         Response response = client.performRequest(
                 GET,
                 request.getIndexName() + "/_search?size=10000",
+                params,
+                new StringEntity(request.createQuery(), Charset.defaultCharset()));
+
+        return jacksonObjectMapper.readValue(response.getEntity().getContent(), request.getTypeReference());
+    }
+    
+     /**
+      * 查询可设置返回size
+      * @param request
+      * @param size
+      * @return
+      * @throws IOException
+      */
+    private <T> ElasticQueryResponse<T> doExecuteQuery(SearchByTemplateRequest request,String size) throws IOException {
+        Map<String, String> params = new HashMap<>();
+        params.put("typed_keys", null);
+        Response response = client.performRequest(
+                GET,
+                request.getIndexName() + "/_search?size="+size,
                 params,
                 new StringEntity(request.createQuery(), Charset.defaultCharset()));
 

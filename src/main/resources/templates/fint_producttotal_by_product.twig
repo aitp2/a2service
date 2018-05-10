@@ -5,10 +5,9 @@
     "bool": {
       "must": [
         {
-          "query_string": {
-            "analyze_wildcard": true,
-            "query": "product"
-          }
+          "exists": {
+               "field": "product"
+             }
         }
       ],
       "must_not": []

@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.mms.cloud.dto.CountryOrderMonitorDTO;
+import com.mms.cloud.dto.ExceptionAggs;
+import com.mms.cloud.dto.ExceptionEntity;
+import com.mms.cloud.dto.ExceptionEntityTypeReference;
 import com.mms.cloud.dto.OrderEntity;
 import com.mms.cloud.dto.OrderEntityTypeReference;
 import com.mms.cloud.dto.OrderStatusEntity;
@@ -27,7 +30,11 @@ import com.mms.cloud.facade.OrderMonitorFacade;
 import com.mms.cloud.RestClientConfig;
 import com.mms.cloud.search.SearchByTemplateRequest;
 import com.mms.cloud.search.SearchService;
+import com.mms.cloud.search.response.HitsAggsResponse;
 import com.mms.cloud.search.response.HitsResponse;
+import com.mms.cloud.search.response.aggregations.Aggregation;
+import com.mms.cloud.search.response.aggregations.bucket.TermsAggregation;
+import com.mms.cloud.search.response.aggregations.bucket.TermsBucket;
 import com.mms.cloud.utils.CityLocation;
 import com.mms.cloud.utils.MonitorStatus;
 import com.mms.cloud.utils.ProvinceMap;
@@ -44,6 +51,71 @@ public class OrderMonitorResource {
 
     @Autowired
     private SearchService searchService;
+    
+    String TERM_EXCEPTION = "terms_exception";
+    
+    /**
+     * 异常聚合查询
+     * @param starttime
+     * @param endtime
+     */
+    @RequestMapping(value="/queryExceptionByAggs", method=RequestMethod.GET)
+    public ResultData<List<ExceptionAggs>> queryExceptionByAggs(@RequestParam(value = "starttime", required = true) String starttime,
+			@RequestParam(value = "endtime", required = true) String endtime){
+    	starttime = starttime.replaceAll("-", "/");
+		endtime = endtime.replaceAll("-", "/");
+		SearchByTemplateRequest request = SearchByTemplateRequest.create()
+                .setIndexName(index)
+                .setTemplateName("aggs_exception.twig")
+                .setAddId(false)
+                .setTypeReference(new ExceptionEntityTypeReference())
+                .addModelParam("starttime", starttime)
+                .addModelParam("endtime", endtime);
+
+		HitsAggsResponse<ExceptionEntity> hitsAggsResponse = searchService.aggsByTemplate(request);
+		Map<String, Aggregation> aggs = hitsAggsResponse.getAggregations();
+		TermsAggregation termsAggregation = (TermsAggregation)aggs.get(TERM_EXCEPTION);
+		List<ExceptionAggs> list = new ArrayList<ExceptionAggs>();
+		for(TermsBucket termsBucket:termsAggregation.getBuckets()){
+			ExceptionAggs e = new ExceptionAggs();
+			e.setName(termsBucket.getKey());
+			e.setCount(termsBucket.getDocCount().toString());
+			list.add(e);
+		}
+		return new ResultData<List<ExceptionAggs>>(true, "success", 20000, list);
+    }
+    
+    /**
+     * 查询异常
+     * @param exception
+     * @param starttime
+     * @param endtime
+     * @return
+     */
+    @RequestMapping(value="/queryException", method=RequestMethod.GET)
+	public ResultData<List<ExceptionEntity>> queryException(
+			@RequestParam("exception") String exception,
+			@RequestParam(value = "starttime", required = true) String starttime,
+			@RequestParam(value = "endtime", required = true) String endtime) {
+    	starttime = starttime.replaceAll("-", "/");
+		endtime = endtime.replaceAll("-", "/");
+		SearchByTemplateRequest request = SearchByTemplateRequest.create()
+                .setIndexName(index)
+                .setTemplateName("query_exception.twig")
+                .setAddId(false)
+                .setTypeReference(new ExceptionEntityTypeReference())
+                .addModelParam("exception", exception)
+                .addModelParam("starttime", starttime)
+                .addModelParam("endtime", endtime);;
+
+        HitsResponse<ExceptionEntity> hitsResponse = searchService.queryByTemplate(request,"10");
+        List<ExceptionEntity> entities = hitsResponse.getHits();
+        if(entities.size() == 0){
+        	return new ResultData<List<ExceptionEntity>>(true, "fail", -1, entities);
+        }
+        
+		return new ResultData<List<ExceptionEntity>>(true, "success", 20000, entities);
+	}
 
     /**
      * 根据时间条件查询订单

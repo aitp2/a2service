@@ -1,0 +1,37 @@
+{
+  "version": true,
+  "_source": [ "logsource","logtime", "exception" ,"message"],
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "exists": {
+               "field": "exception"
+             }
+        },
+          {
+          "range": {
+            "logtime.keyword": {
+              "gte": "{{starttime}}",
+              "lt": "{{endtime}}"
+            }
+          }
+        }
+      ],
+      "must_not": []
+    }
+  },
+    "aggs": {
+    "terms_exception": {
+      "terms": {
+        
+        "field": "exception.keyword", 
+        "order": { 
+          "_count": "desc"
+        },
+        "size": 5
+      }
+    }
+  },
+   "sort": { "logtime.keyword": { "order": "asc" } }
+}
