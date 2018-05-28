@@ -8,6 +8,8 @@ public class TracknumEntity {
 	
 	private String orderCode;
 	
+	private String productCode;
+	
 	private String message;
 
 	public String getLogsource() {
@@ -40,6 +42,14 @@ public class TracknumEntity {
 
 	public void setMessage(String message) {
 		this.message = message;
+	}
+
+	public String getProductCode() {
+		return productCode;
+	}
+
+	public void setProductCode(String productCode) {
+		this.productCode = productCode;
 	}
 
 }

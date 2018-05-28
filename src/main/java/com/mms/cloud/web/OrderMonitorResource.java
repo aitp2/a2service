@@ -1,6 +1,8 @@
 package com.mms.cloud.web;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -13,14 +15,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.mms.cloud.dto.CountryOrderMonitorDTO;
+import com.mms.cloud.dto.DFSOrderDTO;
 import com.mms.cloud.dto.ExceptionAggs;
 import com.mms.cloud.dto.ExceptionEntity;
 import com.mms.cloud.dto.ExceptionEntityTypeReference;
+import com.mms.cloud.dto.LibyOrderDTO;
 import com.mms.cloud.dto.OrderEntity;
 import com.mms.cloud.dto.OrderEntityTypeReference;
 import com.mms.cloud.dto.OrderStatusEntity;
 import com.mms.cloud.dto.OrderStatusMonitorDTO;
 import com.mms.cloud.dto.OrderStatusStatisticsDataDTO;
+import com.mms.cloud.dto.PageableEntity;
 import com.mms.cloud.dto.ProductTotal;
 import com.mms.cloud.dto.ProductTotalTypeReference;
 import com.mms.cloud.dto.ResultData;
@@ -53,6 +58,8 @@ public class OrderMonitorResource {
     private SearchService searchService;
     
     String TERM_EXCEPTION = "terms_exception";
+    
+    String ORDER_EXCEPTION = "terms_orderCode";
     
     /**
      * 异常聚合查询
@@ -116,7 +123,271 @@ public class OrderMonitorResource {
         
 		return new ResultData<List<ExceptionEntity>>(true, "success", 20000, entities);
 	}
+    
+	/**
+	 * 查询所有日志
+	 * @param message
+	 * @param starttime
+	 * @param endtime
+	 * @return
+	 */
+    @RequestMapping(value="/queryAllMessage", method=RequestMethod.GET)
+	public ResultData<List<TracknumEntity>> queryAllMessage(
+			@RequestParam("message") String message,
+			@RequestParam(value = "starttime", required = true) String starttime,
+			@RequestParam(value = "endtime", required = true) String endtime) {
+    	starttime = starttime.replaceAll("-", "/");
+		endtime = endtime.replaceAll("-", "/");
+		SearchByTemplateRequest request = SearchByTemplateRequest.create()
+                .setIndexName(index)
+                .setTemplateName("query_all_message.twig")
+                .setAddId(false)
+                .setTypeReference(new TracknumEntityTypeReference())
+                .addModelParam("message", message)
+                .addModelParam("starttime", starttime)
+                .addModelParam("endtime", endtime);;
 
+        HitsResponse<TracknumEntity> hitsResponse = searchService.queryByTemplate(request);
+        List<TracknumEntity> entities = hitsResponse.getHits();
+        if(entities.size() == 0){
+        	return new ResultData<List<TracknumEntity>>(true, "fail", -1, entities);
+        }
+        
+		return new ResultData<List<TracknumEntity>>(true, "success", 20000, entities);
+	}
+    
+    /**
+     * DFS产品日志查询
+     * @param starttime
+     * @param endtime
+     */
+    @RequestMapping(value="/queryDFSProductByTime", method=RequestMethod.GET)
+    public ResultData<PageableEntity> queryDFSProductByTime(
+    		@RequestParam(value = "productCode", required = false) String productCode,
+    		@RequestParam(value = "starttime", required = false) String starttime,
+			@RequestParam(value = "endtime", required = false) String endtime,
+			@RequestParam(value = "from", required = false) String from,
+			@RequestParam(value = "size", required = false) String size,
+			@RequestParam(value = "pendingtypeCondition", required = false) String pendingtypeCondition){
+    	starttime = starttime.replaceAll("-", "/");
+		endtime = endtime.replaceAll("-", "/");
+		SearchByTemplateRequest request = SearchByTemplateRequest.create()
+                .setIndexName(index)
+                .setTemplateName("dfs_fint_productlog_by_tracknum.twig")
+                .setAddId(false)
+                .setTypeReference(new TracknumEntityTypeReference())
+                .addModelParam("productCode", productCode)
+                .addModelParam("starttime", starttime)
+                .addModelParam("endtime", endtime)
+                .addModelParam("pendingtypeCondition", pendingtypeCondition);
+
+		HitsResponse<TracknumEntity> hitsResponse = searchService.queryByTemplate(request,size,from);
+        List<TracknumEntity> entities = hitsResponse.getHits();
+        
+        List<TracknumEntity> list = new ArrayList<TracknumEntity>();
+        for(TracknumEntity oe:entities){
+        	if(oe.getMessage().contains("Exception")){
+        		list.add(oe);
+        	}
+        }
+        PageableEntity pageableEntity = new PageableEntity();
+        pageableEntity.setList(list);
+        pageableEntity.setTotal(hitsResponse.getTotalHits());
+		return new ResultData<PageableEntity>(true, "success", 20000, pageableEntity);
+    }
+    
+    /**
+     * DFS订单查询
+     * @param starttime
+     * @param endtime
+     */
+    @RequestMapping(value="/queryDFSOperatorByTime", method=RequestMethod.GET)
+    public ResultData<List<DFSOrderDTO>> queryDFSOperatorByTime(
+    		@RequestParam(value = "orderCode", required = false) String orderCode,
+    		@RequestParam(value = "starttime", required = false) String starttime,
+			@RequestParam(value = "endtime", required = false) String endtime){
+    	starttime = starttime.replaceAll("-", "/");
+		endtime = endtime.replaceAll("-", "/");
+		SearchByTemplateRequest request = SearchByTemplateRequest.create()
+                .setIndexName(index)
+                .setTemplateName("dfs_find_operator_by_time.twig")
+                .setAddId(false)
+                .setTypeReference(new TracknumEntityTypeReference())
+                .addModelParam("orderCode", orderCode)
+                .addModelParam("starttime", starttime)
+                .addModelParam("endtime", endtime);
+
+		HitsResponse<TracknumEntity> hitsResponse = searchService.queryByTemplate(request);
+        List<TracknumEntity> entities = hitsResponse.getHits();
+        
+        Map<String,DFSOrderDTO> map = new HashMap<String,DFSOrderDTO>();
+        for(TracknumEntity oe:entities){
+        	DFSOrderDTO dfsorderDTO = null;
+        	if(map.get(oe.getOrderCode())==null){
+        		dfsorderDTO = new DFSOrderDTO();
+        	}else{
+        		dfsorderDTO = map.get(oe.getOrderCode());
+        	}
+        	dfsorderDTO.setOrderCode(oe.getOrderCode());
+        	//设置时间
+        	if(oe.getMessage().contains("DFSPaymentCheckoutFacadeImpl.log(856)")){
+        		dfsorderDTO.setCreateTime(oe.getLogtime());
+        	}
+        	if(oe.getMessage().contains("SubmitOrderEventListener.onSiteEvent(153)")){
+        		dfsorderDTO.setPayTime(oe.getLogtime());
+        	}
+        	if(oe.getMessage().contains("DFSSendToMCSAction.executeAction(48)")){
+        		dfsorderDTO.setSendMCSTime(oe.getLogtime());
+        	}
+        	if(oe.getMessage().contains("DFSStockServiceImpl.reserveForOrder(64)")){
+        		if(oe.getMessage().contains("Exception")){
+        			dfsorderDTO.setSendMCSStatus("Error");
+        		}
+        	}
+        	if(oe.getMessage().contains("DFSConsignmentServiceImpl.updateStatus(158)")){
+        		dfsorderDTO.setMCSCreateTime(oe.getLogtime());
+        	}
+        	if(oe.getMessage().contains("DFSConsignmentServiceImpl.updateStatus(127)")){
+        		dfsorderDTO.setMCSPickTime(oe.getLogtime());
+        	}
+        	if(oe.getMessage().contains("DFSReceiveConsignmnetStatusAction.executeAction(45)")){
+        		dfsorderDTO.setWaitPickTime(oe.getLogtime());
+        	}
+        	if(oe.getMessage().contains("DFSClearPreOrderAction.log(856)")){
+        		dfsorderDTO.setPickupTime(oe.getLogtime());
+        	}
+        	map.put(oe.getOrderCode(), dfsorderDTO);
+        }
+        List<DFSOrderDTO> returnList = new ArrayList<DFSOrderDTO> ();
+        for(String orderCode_:map.keySet()){
+        	if(map.get(orderCode_).getCreateTime() != null && map.get(orderCode_).getPayTime() != null){
+        		returnList.add(map.get(orderCode_));
+        	}
+        }
+        Collections.sort(returnList);
+		return new ResultData<List<DFSOrderDTO>>(true, "success", 20000, returnList);
+    }
+
+    
+    /**
+     * liby订单查询
+     * @param starttime
+     * @param endtime
+     */
+    @RequestMapping(value="/queryLibyOperatorByTime", method=RequestMethod.GET)
+    public ResultData<List<LibyOrderDTO>> queryLibyOperatorByTime(
+    		@RequestParam(value = "orderCode", required = false) String orderCode,
+    		@RequestParam(value = "starttime", required = false) String starttime,
+			@RequestParam(value = "endtime", required = false) String endtime){
+    	starttime = starttime.replaceAll("-", "/");
+		endtime = endtime.replaceAll("-", "/");
+		
+		Map<String,LibyOrderDTO> map = new HashMap<String,LibyOrderDTO>();
+		SearchByTemplateRequest request_ordertotal = SearchByTemplateRequest.create()
+                .setIndexName(index)
+                .setTemplateName("liby_find_total.twig")
+                .setAddId(false)
+                .setTypeReference(new TracknumEntityTypeReference())
+                .addModelParam("starttime", starttime)
+                .addModelParam("endtime", endtime);
+
+		HitsAggsResponse<TracknumEntity> hitsAggsResponse = searchService.aggsByTemplate(request_ordertotal,"0");
+		Map<String, Aggregation> aggs = hitsAggsResponse.getAggregations();
+		TermsAggregation termsAggregation = (TermsAggregation)aggs.get(ORDER_EXCEPTION);
+		if(orderCode != null && !orderCode.equals("") && !orderCode.equals("all")){
+			SearchByTemplateRequest request = SearchByTemplateRequest.create()
+	                .setIndexName(index)
+	                .setTemplateName("dfs_find_operator_by_time.twig")
+	                .setAddId(false)
+	                .setTypeReference(new TracknumEntityTypeReference())
+	                .addModelParam("orderCode", orderCode)
+	                .addModelParam("starttime", starttime)
+	                .addModelParam("endtime", endtime);
+
+			HitsResponse<TracknumEntity> hitsResponse = searchService.queryByTemplate(request);
+	        List<TracknumEntity> entities = hitsResponse.getHits();
+	        
+	        for(TracknumEntity oe:entities){
+	        	LibyOrderDTO libyOrderDTO = null;
+	        	if(map.get(oe.getOrderCode())==null){
+	        		libyOrderDTO = new LibyOrderDTO();
+	        	}else{
+	        		libyOrderDTO = map.get(oe.getOrderCode());
+	        	}
+	        	libyOrderDTO.setOrderCode(oe.getOrderCode());
+	        	//设置时间
+	        	if(oe.getMessage().contains("split Order end")){
+	        		libyOrderDTO.getList_splittime().add(oe.getLogtime());
+	        	}
+	        	if(oe.getMessage().contains("sender service type")){
+	        		libyOrderDTO.getList_sendsaptime().add(oe.getLogtime());
+	        	}
+	        	if(oe.getMessage().contains("order-so-reply")){
+	        		libyOrderDTO.getList_sapreturntime().add(oe.getLogtime());
+	        	}
+	        	if(oe.getMessage().contains("process Order") && oe.getMessage().contains("success")){
+	        		libyOrderDTO.getList_dealtime().add(oe.getLogtime());
+	        	}
+	        	map.put(oe.getOrderCode(), libyOrderDTO);
+	        }
+		}else{
+			int i =0,num=10;
+			if(orderCode != null && orderCode.equals("all")){
+				num = 100000;
+			}
+			for(TermsBucket termsBucket:termsAggregation.getBuckets()){
+				if(i<num){
+					SearchByTemplateRequest request = SearchByTemplateRequest.create()
+			                .setIndexName(index)
+			                .setTemplateName("dfs_find_operator_by_time.twig")
+			                .setAddId(false)
+			                .setTypeReference(new TracknumEntityTypeReference())
+			                .addModelParam("orderCode", termsBucket.getKey())
+			                .addModelParam("starttime", starttime)
+			                .addModelParam("endtime", endtime);
+
+					HitsResponse<TracknumEntity> hitsResponse = searchService.queryByTemplate(request);
+			        List<TracknumEntity> entities = hitsResponse.getHits();
+			        
+			        for(TracknumEntity oe:entities){
+			        	LibyOrderDTO libyOrderDTO = null;
+			        	if(map.get(oe.getOrderCode())==null){
+			        		libyOrderDTO = new LibyOrderDTO();
+			        	}else{
+			        		libyOrderDTO = map.get(oe.getOrderCode());
+			        	}
+			        	libyOrderDTO.setOrderCode(oe.getOrderCode());
+			        	//设置时间
+			        	if(oe.getMessage().contains("split Order end")){
+			        		libyOrderDTO.getList_splittime().add(oe.getLogtime());
+			        	}
+			        	if(oe.getMessage().contains("sender service type")){
+			        		libyOrderDTO.getList_sendsaptime().add(oe.getLogtime());
+			        	}
+			        	if(oe.getMessage().contains("order-so-reply")){
+			        		libyOrderDTO.getList_sapreturntime().add(oe.getLogtime());
+			        	}
+			        	if(oe.getMessage().contains("process Order") && oe.getMessage().contains("success")){
+			        		libyOrderDTO.getList_dealtime().add(oe.getLogtime());
+			        	}
+			        	map.put(oe.getOrderCode(), libyOrderDTO);
+			        }
+				}
+				i = i +1;
+			}
+		}
+		
+		
+        List<LibyOrderDTO> returnList = new ArrayList<LibyOrderDTO> ();
+        for(String orderCode_:map.keySet()){
+//        	if(map.get(orderCode_).getList_splittime() != null && map.get(orderCode_).getList_splittime().size() > 0){
+        		returnList.add(map.get(orderCode_));
+//        	}
+        }
+        Collections.sort(returnList);
+		return new ResultData<List<LibyOrderDTO>>(true, "success", 20000, returnList);
+    }
+    
     /**
      * 根据时间条件查询订单
      * @param queryStartDate

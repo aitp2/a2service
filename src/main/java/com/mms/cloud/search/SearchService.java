@@ -79,6 +79,22 @@ public class SearchService {
             throw new QueryExecutionException("Error when executing a document");
         }
     }
+    
+    public <T> HitsResponse<T> queryByTemplate(SearchByTemplateRequest request,String size,String from) {
+        Assert.notNull(request, "Need to provide a SearchByTemplateRequest object");
+
+        try {
+            ElasticQueryResponse<T> elasticQueryResponse = doExecuteQuery(request,size,from);
+            HitsResponse<T> hitsResponse = new HitsResponse<>();
+
+            putInfoFromQueryIntoHitsResponse(request, elasticQueryResponse, hitsResponse);
+
+            return hitsResponse;
+        } catch (IOException e) {
+            logger.warn("Problem while executing request.", e);
+            throw new QueryExecutionException("Error when executing a document");
+        }
+    }
 
     /**
      * Executes a search request with the provided query, but expects an aggregation part in the query. It will not
@@ -93,6 +109,32 @@ public class SearchService {
 
         try {
             ElasticQueryResponse<T> elasticQueryResponse = doExecuteQuery(request,"0");
+            HitsAggsResponse<T> hitsAggsResponse = new HitsAggsResponse<>();
+            putInfoFromQueryIntoHitsResponse(request,elasticQueryResponse,hitsAggsResponse);
+
+            hitsAggsResponse.setAggregations(elasticQueryResponse.getAggregations());
+            return hitsAggsResponse;
+        } catch (IOException e) {
+            logger.warn("Problem while executing request.", e);
+            throw new QueryExecutionException("Error when executing a document");
+        }
+
+
+    }
+    
+    /**
+     * Executes a search request with the provided query, but expects an aggregation part in the query. It will not
+     * fail in case you do not provide an aggregation.
+     *
+     * @param request Object containing the required parameters to execute the request
+     * @param <T>     Type of resulting objects, must be mapped from json result into java entity
+     * @return Object containing the list of objects and/or the aggregations
+     */
+    public <T> HitsAggsResponse<T> aggsByTemplate(SearchByTemplateRequest request,String size) {
+        Assert.notNull(request, "Need to provide a SearchByTemplateRequest object");
+
+        try {
+            ElasticQueryResponse<T> elasticQueryResponse = doExecuteQuery(request,size);
             HitsAggsResponse<T> hitsAggsResponse = new HitsAggsResponse<>();
             putInfoFromQueryIntoHitsResponse(request,elasticQueryResponse,hitsAggsResponse);
 
@@ -155,6 +197,25 @@ public class SearchService {
 
         return jacksonObjectMapper.readValue(response.getEntity().getContent(), request.getTypeReference());
     }
+    
+    /**
+     * 查询 - 带分页
+     * @param request
+     * @param size
+     * @return
+     * @throws IOException
+     */
+   private <T> ElasticQueryResponse<T> doExecuteQuery(SearchByTemplateRequest request,String size,String from) throws IOException {
+       Map<String, String> params = new HashMap<>();
+       params.put("typed_keys", null);
+       Response response = client.performRequest(
+               GET,
+               request.getIndexName() + "/_search?size="+size+"&from="+from,
+               params,
+               new StringEntity(request.createQuery(), Charset.defaultCharset()));
+
+       return jacksonObjectMapper.readValue(response.getEntity().getContent(), request.getTypeReference());
+   }
 
     private <T> void putInfoFromQueryIntoHitsResponse(SearchByTemplateRequest request, ElasticQueryResponse<T> elasticQueryResponse, HitsResponse<T> hitsResponse) {
         List<T> hits = extractHitsByType(request, elasticQueryResponse);

@@ -1,0 +1,31 @@
+{
+  "version": true,
+  "_source": [ "logsource","logtime", "orderCode" ,"message"],
+  "query": {
+    "bool": {
+      "must": [
+      {
+          "query_string": {
+            "analyze_wildcard": true,
+            "query": "orderCode:*{{orderCode}}*"
+          }
+        },
+       {
+          "exists": {
+               "field": "orderCode"
+             }
+        },
+          {
+          "range": {
+            "logtime.keyword": {
+              "gte": "{{starttime}}",
+              "lt": "{{endtime}}"
+            }
+          }
+        }
+      ],
+      "must_not": []
+    }
+  },
+   "sort": { "logtime.keyword": { "order": "asc" } }
+}

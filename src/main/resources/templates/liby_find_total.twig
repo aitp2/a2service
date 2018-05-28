@@ -1,0 +1,37 @@
+{
+  "version": true,
+  "_source": [ "logsource","logtime","message"],
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "exists": {
+               "field": "orderCode"
+             }
+        },
+          {
+          "range": {
+            "logtime.keyword": {
+              "gte": "{{starttime}}",
+              "lt": "{{endtime}}"
+            }
+          }
+        }
+      ],
+      "must_not": []
+    }
+  },
+    "aggs": {
+    "terms_orderCode": {
+      "terms": {
+        
+        "field": "orderCode.keyword", 
+        "order": { 
+          "_term": "desc"
+        },
+        "size": 10
+      }
+    }
+  },
+   "sort": { "logtime.keyword": { "order": "asc" } }
+}
