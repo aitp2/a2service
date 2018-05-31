@@ -43,6 +43,8 @@ import com.mms.cloud.search.response.aggregations.bucket.TermsBucket;
 import com.mms.cloud.utils.CityLocation;
 import com.mms.cloud.utils.MonitorStatus;
 import com.mms.cloud.utils.ProvinceMap;
+import com.mms.quartz.model.AlertRule;
+import com.mms.quartz.service.QuartzTableService;
 
 @RestController
 @RequestMapping("/api")
@@ -56,6 +58,9 @@ public class OrderMonitorResource {
 
     @Autowired
     private SearchService searchService;
+    
+    @Autowired
+    private QuartzTableService quartzTableService;
     
     String TERM_EXCEPTION = "terms_exception";
     
@@ -617,6 +622,28 @@ public class OrderMonitorResource {
         }
         
 		return new ResultData<List<ProductTotal>>(true, "success", 20000, entities);
+	}
+	
+	/**
+	 * 更新警告cronjob
+	 * @param id
+	 * @param name
+	 * @param status
+	 * @return
+	 */
+	@RequestMapping(value="/updateAlertRuleCronjob", method=RequestMethod.GET)
+    public boolean updateAlertRuleCronjob(@RequestParam(value = "id", required = true) String id,
+			@RequestParam(value = "name", required = true) String name ,@RequestParam(value = "status", required = true) String status){
+		AlertRule alertRule = new AlertRule();
+		alertRule.setId(id);
+		alertRule.setName(name);
+		alertRule.setStatus(status);
+		try {
+			return quartzTableService.update(alertRule);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 	
 	@RequestMapping(value="/users", method=RequestMethod.GET)

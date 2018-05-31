@@ -3,6 +3,10 @@ package com.mms.cloud.dto;
 import java.io.Serializable;
 
 public class ResultData<T> implements Serializable {
+	
+	public ResultData(){
+		super();
+	}
 
 	public ResultData(String message, boolean isSucessful) {
 		super();
