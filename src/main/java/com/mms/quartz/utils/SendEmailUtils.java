@@ -40,7 +40,7 @@ public class SendEmailUtils {
     private final static String HOST = "smtp.126.com";  
    
     // SMTP邮件服务器默认端口  
-    private final static String PORT = "25";  
+    private final static String PORT = "465";  
    
     // 是否要求身份认证  
     private final static String IS_AUTH = "true";  
@@ -63,6 +63,8 @@ public class SendEmailUtils {
         props.setProperty("mail.smtp.host", HOST);  
         props.setProperty("mail.smtp.port", PORT);  
         props.setProperty("mail.smtp.auth", IS_AUTH);  
+        props.setProperty("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        props.setProperty("mail.smtp.socketFactory.port", "465");
         props.setProperty("mail.debug",IS_ENABLED_DEBUG_MOD);  
     }  
    
