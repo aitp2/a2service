@@ -49,7 +49,7 @@ public class QuartzTableService {
 			Map<String, String> para = new HashMap<String, String>();
 			para.put("id", config.getId());
 			String result = HttpClientUtil.httpGet(
-					this.weburl+"/alertapi/getAlertRule",
+					this.weburl+"/api/getAlertRule",
 					para);
 			ResultData<AlertRule> parseObject = JSON.parseObject(result,
 					new TypeReference<ResultData<AlertRule>>() {
@@ -69,7 +69,7 @@ public class QuartzTableService {
 	public void startJobs() {
 		try {
 			String result = HttpClientUtil.httpGet(
-					this.weburl+"/alertapi/getAllAlertRules",
+					this.weburl+"/api/getAllAlertRules",
 					null);
 			ResultData<List<AlertRule>> parseObject = JSON.parseObject(result,
 					new TypeReference<ResultData<List<AlertRule>>>() {

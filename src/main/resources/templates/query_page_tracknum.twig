@@ -1,0 +1,31 @@
+{ 
+ "version": true,
+  "_source": [ "logsource","logtime", "{{tracknumtype}}"],
+  "query": {
+    "bool": {
+      "must": [
+      {
+          "query_string": {
+            "analyze_wildcard": true,
+            "query": "orderCode:*{{tracknumValue}}* AND message:{{nomarl_pattern}}"
+          }
+        },
+       {
+          "exists": {
+               "field": "{{tracknumtype}}"
+             }
+        },
+          {
+          "range": {
+            "logtime.keyword": {
+              "gte": "{{starttime}}",
+              "lt": "{{endtime}}"
+            }
+          }
+        }
+      ],
+      "must_not": []
+    }
+  },
+   "sort": { "logtime.keyword": { "order": "asc" } }
+}

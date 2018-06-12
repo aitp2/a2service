@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.mms.cloud.dto.CountryOrderMonitorDTO;
 import com.mms.cloud.dto.DFSOrderDTO;
 import com.mms.cloud.dto.ExceptionAggs;
@@ -29,6 +31,8 @@ import com.mms.cloud.dto.PageableEntity;
 import com.mms.cloud.dto.ProductTotal;
 import com.mms.cloud.dto.ProductTotalTypeReference;
 import com.mms.cloud.dto.ResultData;
+import com.mms.cloud.dto.SystemFlowDTO;
+import com.mms.cloud.dto.SystemFlowTracknumDTO;
 import com.mms.cloud.dto.TracknumEntity;
 import com.mms.cloud.dto.TracknumEntityTypeReference;
 import com.mms.cloud.facade.OrderMonitorFacade;
@@ -45,6 +49,7 @@ import com.mms.cloud.utils.MonitorStatus;
 import com.mms.cloud.utils.ProvinceMap;
 import com.mms.quartz.model.AlertRule;
 import com.mms.quartz.service.QuartzTableService;
+import com.mms.quartz.utils.HttpClientUtil;
 
 @RestController
 @RequestMapping("/api")
@@ -55,6 +60,8 @@ public class OrderMonitorResource {
 	private OrderMonitorFacade orderMonitorFacade;
 	
     private String index;
+    
+    private String weburl;
 
     @Autowired
     private SearchService searchService;
@@ -646,6 +653,146 @@ public class OrderMonitorResource {
 		}
 	}
 	
+    /**
+     * 自定义系统流程查询
+     * @param starttime
+     * @param endtime
+     */
+    @RequestMapping(value="/querySystemFlowByTracknum", method=RequestMethod.GET)
+    public ResultData<PageableEntity> querySystemFlowByTracknum(
+    		@RequestParam(value = "tracknumtype", required = false) String tracknumtype,
+    		@RequestParam(value = "starttime", required = false) String starttime,
+			@RequestParam(value = "endtime", required = false) String endtime,
+			@RequestParam(value = "from", required = false) String from,
+			@RequestParam(value = "size", required = false) String size,
+			@RequestParam(value = "tracknum", required = false) String tracknum){
+    	starttime = starttime.replaceAll("-", "/");
+		endtime = endtime.replaceAll("-", "/");
+		
+		List<SystemFlowDTO> list_flow_config = new ArrayList<SystemFlowDTO>();
+		Map<String, String> para = new HashMap<String, String>();
+		para.put("tracknumtype", tracknumtype);
+		try {
+			String result = HttpClientUtil.httpGet(
+					this.weburl+"/api/getSystemFlow",para);
+			ResultData<List<SystemFlowDTO>> parseObject = JSON.parseObject(result,
+					new TypeReference<ResultData<List<SystemFlowDTO>>>() {
+					});
+			list_flow_config = parseObject.getSerializableData();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		long totalsize = 0;
+		Map<String,List<SystemFlowDTO>> map_SystemFlow_value = new HashMap<String,List<SystemFlowDTO>>();
+		for(SystemFlowDTO systemFlow_config:list_flow_config){
+			if(systemFlow_config.getNodeno().equals("1")){
+				//获取所有第一个节点,用于分页及后续数据范围查找
+				SearchByTemplateRequest request_page_tracknum = SearchByTemplateRequest.create()
+		                .setIndexName(index)
+		                .setTemplateName("query_page_tracknum.twig")
+		                .setAddId(false)
+		                .setTypeReference(new TracknumEntityTypeReference())
+		                .addModelParam("tracknumtype", tracknumtype)
+		                .addModelParam("starttime", starttime)
+		                .addModelParam("endtime", endtime)
+		                .addModelParam("nomarl_pattern", systemFlow_config.getNomarl_pattern())
+		                .addModelParam("tracknumValue", tracknum);
+				
+				HitsResponse<TracknumEntity> hitsResponse_page_tracknum = searchService.queryByTemplate(request_page_tracknum,size,from);
+				List<TracknumEntity> entities_page_tracknum = hitsResponse_page_tracknum.getHits();
+				totalsize = hitsResponse_page_tracknum.getTotalHits();
+				for(TracknumEntity tracknumEntity:entities_page_tracknum){
+					map_SystemFlow_value.put(tracknumEntity.getOrderCode(), new ArrayList<SystemFlowDTO>());
+				}
+			}
+		}
+		String pagetracknum = "";
+		for(String key:map_SystemFlow_value.keySet()){
+			if(pagetracknum.equals("")){
+				pagetracknum = "\""+key+"\"";
+			}else{
+				pagetracknum = pagetracknum+ ",\"" + key +"\"";
+			}
+		}
+		//查询上面第一节点tracknum范围内所有系统节点message数据
+		SearchByTemplateRequest request_page_tracknum = SearchByTemplateRequest.create()
+                .setIndexName(index)
+                .setTemplateName("query_message_by_page_tracknum.twig")
+                .setAddId(false)
+                .setTypeReference(new TracknumEntityTypeReference())
+                .addModelParam("tracknumtype", tracknumtype)
+                .addModelParam("starttime", starttime)
+                .addModelParam("endtime", endtime)
+                .addModelParam("pagetracknum", pagetracknum);
+		HitsResponse<TracknumEntity> hitsResponse_page_tracknum = searchService.queryByTemplate(request_page_tracknum);
+		List<TracknumEntity> entities_page_tracknum = hitsResponse_page_tracknum.getHits();
+		for(TracknumEntity tracknumEntity:entities_page_tracknum){
+			SystemFlowDTO systemFlow_value = new SystemFlowDTO();
+			systemFlow_value.setTracknum(tracknumEntity.getOrderCode());
+			for(SystemFlowDTO systemFlow_config2:list_flow_config){
+				if(tracknumEntity.getMessage().contains(systemFlow_config2.getNomarl_pattern())){
+					systemFlow_value.setNodeno(systemFlow_config2.getNodeno());
+					systemFlow_value.setName(systemFlow_config2.getName());
+				}
+			}
+			systemFlow_value.setLogtime(tracknumEntity.getLogtime());
+			boolean addflag = true;
+			if(map_SystemFlow_value.get(tracknumEntity.getOrderCode()) != null
+					&& map_SystemFlow_value.get(tracknumEntity.getOrderCode()).size() > 0){
+				for(SystemFlowDTO systemFlow_haveadd:map_SystemFlow_value.get(tracknumEntity.getOrderCode())){
+					System.out.println(systemFlow_haveadd.getTracknum()+systemFlow_haveadd.getName()+systemFlow_haveadd.getNodeno()+"  "+systemFlow_value.getNodeno());
+					if(systemFlow_haveadd.getNodeno().equals(systemFlow_value.getNodeno())){
+						addflag = false;
+					}
+				}
+				
+			}
+			if(addflag){
+				if(systemFlow_value.getNodeno() != null){
+					map_SystemFlow_value.get(tracknumEntity.getOrderCode()).add(systemFlow_value);
+				}
+			}
+		}
+		//补足为null节点	
+		for(SystemFlowDTO sf:list_flow_config){
+			for(String key:map_SystemFlow_value.keySet()){
+				boolean esitflag = false;
+				List<SystemFlowDTO>  list_sy=map_SystemFlow_value.get(key);
+				for(SystemFlowDTO sf_:list_sy){
+					if(sf_.getNodeno().equals(sf.getNodeno())){
+						esitflag = true;
+					}
+				}
+				if(esitflag == false){
+					SystemFlowDTO SystemFlow_null = new SystemFlowDTO();
+					SystemFlow_null.setTracknum(key);
+					SystemFlow_null.setNodeno(sf.getNodeno());
+					map_SystemFlow_value.get(key).add(SystemFlow_null);
+				}
+			}
+    	}
+		
+        List<SystemFlowTracknumDTO> list_return = new ArrayList<SystemFlowTracknumDTO>();
+        for(String key:map_SystemFlow_value.keySet()){
+        	SystemFlowTracknumDTO systemFlowTracknum = new SystemFlowTracknumDTO();
+        	systemFlowTracknum.setTracknum(key);
+        	Collections.sort(map_SystemFlow_value.get(key));
+        	
+        	systemFlowTracknum.setSystemFlowList(map_SystemFlow_value.get(key));
+        	list_return.add(systemFlowTracknum);
+        }
+        
+        
+        
+        Collections.sort(list_return);
+        PageableEntity pageableEntity = new PageableEntity();
+        pageableEntity.setList_systemFlowTracknum(list_return);
+        pageableEntity.setTotal(totalsize);
+		return new ResultData<PageableEntity>(true, "success", 20000, pageableEntity);
+		
+    }
+	
 	@RequestMapping(value="/users", method=RequestMethod.GET)
 	public String getusers(){
 		String json = "[{"+
@@ -667,4 +814,9 @@ public class OrderMonitorResource {
     public void setIndex(String index) {
         this.index = index;
     }
+	
+	@Value("${monitor.weburl}")
+	public void setWeburl(String weburl) {
+		this.weburl = weburl;
+	}
 }
