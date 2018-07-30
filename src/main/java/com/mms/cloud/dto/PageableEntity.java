@@ -8,6 +8,8 @@ public class PageableEntity {
 	
 	private List<SystemFlowTracknumDTO> list_systemFlowTracknum;
 	
+	private List<A5EventEntity> list_a5EventEntity;
+	
 	private long total;
 
 	public List<TracknumEntity> getList() {
@@ -33,6 +35,14 @@ public class PageableEntity {
 	public void setList_systemFlowTracknum(
 			List<SystemFlowTracknumDTO> list_systemFlowTracknum) {
 		this.list_systemFlowTracknum = list_systemFlowTracknum;
+	}
+
+	public List<A5EventEntity> getList_a5EventEntity() {
+		return list_a5EventEntity;
+	}
+
+	public void setList_a5EventEntity(List<A5EventEntity> list_a5EventEntity) {
+		this.list_a5EventEntity = list_a5EventEntity;
 	}
 
 }
